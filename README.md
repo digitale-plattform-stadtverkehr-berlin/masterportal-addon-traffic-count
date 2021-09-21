@@ -9,7 +9,7 @@ dev branch = Masterportal 2.11.x
 
 ## Development
 
-1. clone the masterportal repo and enter the directory
+1. Clone the masterportal repo and enter the directory
 ```
 git clone https://bitbucket.org/geowerkstatt-hamburg/masterportal.git
 cd masterportal
@@ -20,7 +20,10 @@ cd masterportal
 git checkout stable
 ```
 
-3. delete the (masterportsl default empty) _addons_ folder and clone this branch in the  _addons_ directory
+* You can also just use a copy of the masterportal source in the desired Version.
+
+
+3. delete the (masterportal default empty) _addons_ folder and clone this branch in the  _addons_ directory
 ```
 rmdir addons
 git clone https://gitlab.wemove.com/wemove/masterportal-addon-trafficCount addons
@@ -35,6 +38,13 @@ npm install
 ```
 npm install
 ```
+
+You can view the running Masterportal at https://localhost:9001
+
+* At https://localhost:9001/portal/basic you can see the basic portal.
+
+6. put your Portals Config in the _portal_ dir of the root folder. To see the functionality of the TrafficCount Addon, you have to use it in your Portal Config.
+
 
 [siehe Setup Masterportal](https://bitbucket.org/geowerkstatt-hamburg/masterportal/src/dev/doc/setupDev.md)
 
