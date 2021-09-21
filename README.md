@@ -152,9 +152,3 @@ zu finden sein.
   }
 }
 ```
-
-## Entwicklung Komoot Suche
-
-In die Suchleiste ist eine Suche mit [Komoot Photon](https://photon.komoot.io) integriert.
-
-Siehe auch die Dokumentation der [config.json](./doc/config.json.md#markdown-header-portalconfigsearchbarkomoot)
