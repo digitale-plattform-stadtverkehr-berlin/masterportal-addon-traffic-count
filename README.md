@@ -4,8 +4,8 @@ Entwicklung Masterportal Addon TrafficCount (gfiTheme)
 [Masterportal](https://bitbucket.org/geowerkstatt-hamburg/masterportal/src/dev/) TrafficCount Addon zur Verwendung in der "Digitale Plattform Stadtverkehr - Berlin"-Plattform.
 Basiert auf dem [Traffic Count Addon der Geowerkstatt Hamburg](https://bitbucket.org/geowerkstatt-hamburg/addons/src/dev/gfiThemes/trafficCount/).
 
-main branch = Masterportal 2.6.x
-dev branch = Masterportal 2.11.x
+* main branch = Masterportal 2.6.x
+* dev branch = Masterportal 2.11.x
 
 ## Development
 
@@ -36,7 +36,7 @@ npm install
 
 5. Start the Server in Development
 ```
-npm install
+npm start
 ```
 
 You can view the running Masterportal at https://localhost:9001
