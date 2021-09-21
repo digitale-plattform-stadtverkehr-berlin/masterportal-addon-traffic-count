@@ -34,7 +34,6 @@ export default {
             title: "",
             description: "",
             headerProperties: [],
-            archiveStartDate: "2020-01-01",
             meansOfTransport: "",
             currentTabId: "infos",
             keyInfo: "info",
@@ -120,9 +119,6 @@ export default {
                 };
                 this.headerProperties.push(headerProperty);
             });
-
-            this.archiveStartDate = typeof gfiParams === "object" && gfiParams.hasOwnProperty("archiveStartDate") ? gfiParams.archiveStartDate : this.archiveStartDate;
-
             this.setHeader(this.api, this.propThingId, this.meansOfTransportsCount[0], this.headerProperties);
             this.setComponentKey(this.propThingId);
             this.setActiveDefaultTab();
@@ -317,18 +313,13 @@ export default {
          * @returns {void}  -
          */
         setGfiDiagramWidth: function () {
-            let gfiWrapper = document.querySelector(".gfi-detached");
-            if (gfiWrapper) {
-              gfiWrapper.style.right = "auto";
-              gfiWrapper.style.left = "0px";
-              gfiWrapper.style.top = "0px";
-              gfiWrapper.style.width = "98%";
-              gfiWrapper.style.maxWidth = "992px";
-            }
-            let gfiContent = document.querySelector(".gfi-content");
-            if (gfiContent) {
-              gfiContent.style.width = "100%";
-              gfiContent.style.maxWidth = "none";
+            let toolWindow = document.querySelector(".tool-window-vue");
+            if (toolWindow) {
+              toolWindow.style.right = "auto";
+              toolWindow.style.left = "10px";
+              toolWindow.style.top = "10px";
+              toolWindow.style.width = "98%";
+              toolWindow.style.maxWidth = "992px";
             }
         }
     }
@@ -340,6 +331,7 @@ export default {
         <div class="header">
             <b>{{ idLabel }}:</b> {{ title }}<br><br>
             <b>{{ descriptionLabel }}:</b><br>{{ description }}<br><br>
+
             <span v-for="headerProperty in headerProperties">
                 <b>{{ headerProperty.label }}:</b> {{ headerProperty.value }}<br>
             </span>
@@ -422,7 +414,6 @@ export default {
                     :api="api"
                     :thingId="propThingId"
                     :meansOfTransport="mot['stream']"
-                    :archiveStartDate="archiveStartDate"
                 />
               </div>
 
@@ -438,7 +429,6 @@ export default {
                     :api="api"
                     :thingId="propThingId"
                     :meansOfTransport="mot['stream']"
-                    :archiveStartDate="archiveStartDate"
                 />
               </div>
 

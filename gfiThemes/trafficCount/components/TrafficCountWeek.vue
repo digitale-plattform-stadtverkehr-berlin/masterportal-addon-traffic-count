@@ -42,11 +42,7 @@ export default {
             type: String,
             default: "undefined",
             required: false
-        },
-        archiveStartDate: {
-            type: String,
-            required: true
-        },
+        }
     },
     data () {
         return {
@@ -133,8 +129,7 @@ export default {
         },
 
         setWeekdatepicker: function () {
-            //const startDate = moment("2020-01-01") > moment().subtract(1, "year") ? moment("2020-01-01") : moment().subtract(1, "year");
-            const startDate = moment(this.archiveStartDate);
+            const startDate = moment("2020-01-01") > moment().subtract(1, "year") ? moment("2020-01-01") : moment().subtract(1, "year");
 
             if (!this.weekDatepicker) {
                 this.weekDatepicker = new DatepickerModel({
