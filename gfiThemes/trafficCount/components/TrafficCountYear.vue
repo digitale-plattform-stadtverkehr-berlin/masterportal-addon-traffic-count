@@ -43,6 +43,10 @@ export default {
             default: "undefined",
             required: false
         },
+        archiveStartDate: {
+            type: String,
+            required: true
+        },
     },
     data () {
         return {
@@ -128,7 +132,7 @@ export default {
          * @returns {Void}  -
          */
         setYearDatepicker: function () {
-            const startDate = moment("2020-01-01");
+            const startDate = moment(this.archiveStartDate);
 
             // create datepicker only on first enter of tab
             if (!this.yearDatepicker) {

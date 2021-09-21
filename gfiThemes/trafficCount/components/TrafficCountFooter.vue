@@ -46,14 +46,14 @@ export default {
             handler (newVal, oldVal) {
                 if (oldVal) {
                     if (this.meansOfTransport !== "undefined")
-                        this.setFooterLastUpdate(this.api, newVal, this.meansOfTransport);
+                        this.setFooterLastUpdate(this.api, newVal, this.meansOfTransport, this.dayInterval);
                 }
             },
             immediate: true
         },
 
         currentTabId: function (newVal) {
-            this.setFooterLastUpdate(this.api, newVal, this.meansOfTransport);
+            this.setFooterLastUpdate(this.api, newVal, this.meansOfTransport, this.dayInterval);
         }
     },
     mounted: function () {
