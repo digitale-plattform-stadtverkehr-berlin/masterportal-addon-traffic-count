@@ -23,7 +23,7 @@ export function addMissingDataDay (from, timeData, minuteInterval = 5) {
 
     // add missing datasets
     for (h = 0; h < 24; h++) {
-        for (m = 0; m < 12; m++) {
+        for (m = 0; m < 60 / minuteInterval; m++) {
             key = datePrefix + String(h).padStart(2, "0") + ":" + String(m * minuteInterval).padStart(2, "0") + ":00";
 
             if (zeroedData.hasOwnProperty(key)) {
