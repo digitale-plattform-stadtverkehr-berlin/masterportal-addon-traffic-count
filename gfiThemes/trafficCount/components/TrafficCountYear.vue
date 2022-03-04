@@ -56,7 +56,7 @@ export default {
             // props for diagram
             setTooltipValue: (tooltipItem) => {
                 // add 3 days to match thursdays
-                const objMoment = moment(tooltipItem.label, "YYYY-MM-DD HH:mm:ss").add(3, "days");
+                const objMoment = moment(tooltipItem.datetime, "YYYY-MM-DD HH:mm:ss").add(3, "days");
 
                 return this.$t("additional:modules.tools.gfi.themes.trafficCount.calendarweek") + " " + objMoment.format("WW") + " / " + objMoment.format("YYYY") + ": " + thousandsSeparator(tooltipItem.value);
             },

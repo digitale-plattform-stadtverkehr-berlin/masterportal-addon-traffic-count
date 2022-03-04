@@ -55,7 +55,7 @@ export default {
 
             // props for diagram
             setTooltipValue: (tooltipItem) => {
-                return moment(tooltipItem.label, "YYYY-MM-DD HH:mm:ss").format("DD.MM.YYYY") + ": " + thousandsSeparator(tooltipItem.value);
+                return moment(tooltipItem.datetime, "YYYY-MM-DD HH:mm:ss").format("DD.MM.YYYY") + ": " + thousandsSeparator(tooltipItem.value);
             },
             yAxisTicks: 8,
             renderLabelXAxis: (datetime) => {

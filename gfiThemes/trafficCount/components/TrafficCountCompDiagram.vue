@@ -244,7 +244,8 @@ export default {
                       borderWidth: 1,
                       pointRadius: 1,
                       pointHoverRadius: 3,
-                      showLine: false
+                      showLine: false,
+                      datetimes
                     });
 
                     const interpolatedData = this.interpolateData(origData, 10);
@@ -258,7 +259,8 @@ export default {
                       borderWidth: 2,
                       pointRadius: 0,
                       pointHoverRadius: 0,
-                      tension: 0.4
+                      tension: 0.4,
+                      datetimes
                     });
                 } else {  // do not interpolate, mostly in diagrams wout that many points
                   // do show lines between points with tension, use stronger colors
@@ -272,7 +274,8 @@ export default {
                     borderWidth: 2,
                     pointRadius: 3,
                     pointHoverRadius: 3,
-                    tension: 0.4
+                    tension: 0.4,
+                    datetimes
                   });
                 }
             });
@@ -340,7 +343,20 @@ export default {
                         },
                         callbacks: {
                             // use label callback to return the desired label
-                            label: (tooltipItem) => {
+                            label: (tooltipItem, chartJsData) => {
+                                if (
+                                    typeof chartJsData === "object"
+                                    && Array.isArray(chartJsData.datasets)
+                                    && typeof chartJsData.datasets[tooltipItem.datasetIndex] === "object"
+                                    && Array.isArray(chartJsData.datasets[tooltipItem.datasetIndex].datetimes)
+                                    && chartJsData.datasets[tooltipItem.datasetIndex].datetimes[tooltipItem.index]
+                                ) {
+                                    tooltipItem.datetime = chartJsData.datasets[tooltipItem.datasetIndex].datetimes[tooltipItem.index];
+                                }
+                                else if (typeof tooltipItem === "object") {
+                                    tooltipItem.datetime = tooltipItem.label;
+                                }
+
                                 return options.setTooltipValue(tooltipItem);
                             },
                             // remove title

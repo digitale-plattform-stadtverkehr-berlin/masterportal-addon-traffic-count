@@ -56,7 +56,7 @@ export default {
 
             // props for diagram
             setTooltipValue: (tooltipItem) => {
-                return moment(tooltipItem.label, "YYYY-MM-DD HH:mm:ss").format("HH:mm") + " " + this.$t("additional:modules.tools.gfi.themes.trafficCount.clockLabel") + ": " + thousandsSeparator(tooltipItem.value);
+                return moment(tooltipItem.datetime, "YYYY-MM-DD HH:mm:ss").format("HH:mm") + " " + this.$t("additional:modules.tools.gfi.themes.trafficCount.clockLabel") + ": " + thousandsSeparator(tooltipItem.value);
             },
             xAxisTicks: 12,
             yAxisTicks: 8,
