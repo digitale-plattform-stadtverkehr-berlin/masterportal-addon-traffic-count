@@ -5,8 +5,9 @@ import TrafficCountCheckbox from "./TrafficCountCheckbox.vue";
 import TrafficCountDownloads from "./TrafficCountDownloads.vue";
 import thousandsSeparator from "../../../../src/utils/thousandsSeparator.js";
 import moment from "moment";
-import DatepickerModel from "../../../../modules/snippets/datepicker/model";
-import DatepickerView from "../../../../modules/snippets/datepicker/view";
+import DatePicker from "vue2-datepicker";
+import TrafficCountDatePicker from "./TrafficCountDatePicker.vue";
+import "vue2-datepicker/index.css";
 import {addMissingDataWeek} from "../library/addMissingData.js";
 
 export default {
@@ -15,7 +16,9 @@ export default {
         TrafficCountCompDiagram,
         TrafficCountCompTable,
         TrafficCountDownloads,
-        TrafficCountCheckbox
+        TrafficCountCheckbox,
+        DatePicker,
+        TrafficCountDatePicker
     },
     props: {
         label: {
@@ -23,12 +26,16 @@ export default {
             required: true
         },
         motId: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         motType: {
-          type: String,
-          required: true
+            type: String,
+            required: true
+        },
+        weekStartOffset: {
+            type: Number,
+            required: true
         },
         api: {
             type: Object,
@@ -46,12 +53,12 @@ export default {
         archiveStartDate: {
             type: String,
             required: true
-        },
+        }
     },
     data () {
         return {
-            weekDatepicker: null,
             apiData: [],
+            dates: null,
 
             // props for diagram
             setTooltipValue: (tooltipItem) => {
@@ -80,9 +87,9 @@ export default {
             setTableTitle: () => {
                 if (this.motType == "speed") {
                     return this.label + " " + this.measureName;
-                } else {
-                    return this.label;
                 }
+                return this.label;
+
             },
 
             setColTitle: datetime => {
@@ -101,8 +108,8 @@ export default {
                 return thousandsSeparator(value);
             },
             weekInterval: "1-Tag",
-            diagramWeekId: "diagramWeek"+this.motId,
-            tableWeekId: "tableWeek"+this.motId
+            diagramWeekId: "diagramWeek" + this.motId,
+            tableWeekId: "tableWeek" + this.motId
         };
     },
     computed: {
@@ -110,71 +117,39 @@ export default {
             return this.$t("additional:modules.tools.gfi.themes.trafficCount.calendarweek");
         }
     },
-    mounted () {
+    watch: {
+        dates (value) {
+            if (Array.isArray(value)) {
+                this.weekDatepickerValueChanged(value);
+            }
+        }
+    },
+    created () {
+        this.weekFormat = "YYYY [KW] WW";
         moment.locale(i18next.language);
-        if (this.meansOfTransport !== "undefined")
-            this.setWeekdatepicker();
+
+        if (moment().isoWeekday() <= 1) {
+            this.dates = [moment().subtract(7, "days").format(this.weekFormat)];
+        }
+        else {
+            this.dates = [moment().format(this.weekFormat)];
+        }
         this.setMeasureName();
     },
     methods: {
-        setMeasureName: function() {
-          const api = this.api;
-          const thingId = this.thingId;
-          const meansOfTransport = this.meansOfTransport;
-          const interval = this.weekInterval;
+        setMeasureName: function () {
+            const api = this.api,
+                thingId = this.thingId,
+                meansOfTransport = this.meansOfTransport,
+                interval = this.weekInterval;
 
-          api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
+            api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
             // console.log("received units symbol "+units.symbol);
-            this.measureName = units.symbol;
-          }, errorUnits => {
+                this.measureName = units.symbol;
+            }, errorUnits => {
             // console.log("received errornous symbol");
-            this.measureName = "??";
-          }, false, false);
-        },
-
-        setWeekdatepicker: function () {
-            //const startDate = moment("2020-01-01") > moment().subtract(1, "year") ? moment("2020-01-01") : moment().subtract(1, "year");
-            const startDate = moment(this.archiveStartDate);
-
-            if (!this.weekDatepicker) {
-                this.weekDatepicker = new DatepickerModel({
-                    preselectedValue: moment().toDate(),
-                    multidate: 5,
-                    startDate: startDate.toDate(),
-                    endDate: moment().toDate(),
-                    type: "datepicker",
-                    selectWeek: true,
-                    inputs: $(document.getElementById("weekDateInput"+this.motId)),
-                    calendarWeeks: true,
-                    format: {
-                        toDisplay: function (date) {
-                            return moment(date).startOf("isoWeek").format("DD.MM.YYYY") + "-" + moment(date).endOf("isoWeek").format("DD.MM.YYYY");
-                        },
-                        toValue: function (date) {
-                            return moment.utc(date, "DD.MM.YYYY").toDate();
-                        }
-                    },
-                    todayHighlight: false,
-                    language: i18next.language
-                });
-
-                this.weekDatepicker.on("valuesChanged", function (evt) {
-                    let date = evt.attributes.date;
-
-                    if (date && !Array.isArray(date)) {
-                        date = [date];
-                    }
-                    this.weekDatepickerValueChanged(date);
-                }.bind(this));
-
-                if (document.querySelector("#weekDateSelector"+this.motId)) {
-                    document.querySelector("#weekDateSelector"+this.motId).appendChild(new DatepickerView({model: this.weekDatepicker}).render().el);
-                }
-                this.weekDatepicker.updateValues(moment().toDate());
-            }
-            else if (document.querySelector("#weekDateSelector"+this.motId)) {
-                document.querySelector("#weekDateSelector"+this.motId).appendChild(new DatepickerView({model: this.weekDatepicker}).render().el);
-            }
+                this.measureName = "??";
+            }, false, false);
         },
 
         /**
@@ -189,18 +164,18 @@ export default {
                 meansOfTransport = this.meansOfTransport,
                 timeSettings = [];
 
-            if (dates.length === 0) {
+            if (!Array.isArray(dates) || dates.length === 0) {
                 this.apiData = [];
             }
             else {
-                dates.sort((earlyDate, lateDate) => {
+                [...dates].sort((earlyDate, lateDate) => {
                     // Showing earlier date first
                     return earlyDate - lateDate;
                 }).forEach(date => {
                     timeSettings.push({
                         interval: this.weekInterval,
-                        from: moment(date).startOf("isoWeek").format("YYYY-MM-DD"),
-                        until: moment(date).endOf("isoWeek").format("YYYY-MM-DD")
+                        from: moment(date, this.weekFormat).startOf("isoWeek").format("YYYY-MM-DD"),
+                        until: moment(date, this.weekFormat).endOf("isoWeek").format("YYYY-MM-DD")
                     });
                 });
 
@@ -229,13 +204,68 @@ export default {
         },
 
         /**
-         * opens the calender
-         * @returns {Void}  -
+         * Changes the dates array with given dates.
+         * @param {String[]} dates The dates.
+         * @returns {void}
          */
-        toggleCalendar: function () {
-            const input = this.$el.querySelector("input");
+        change (dates) {
+            if (!Array.isArray(dates)) {
+                return;
+            }
+            this.dates = dates;
+        },
 
-            input.focus();
+        /**
+         * Gets the date field title based on given moment date.
+         * @param {Object} momentDate The moment date.
+         * @returns {String} The date field title.
+         */
+        getDateFieldTitle (momentDate) {
+            if (typeof momentDate?.format !== "function") {
+                return "";
+            }
+            return momentDate.format("DD.MM.YYYY");
+        },
+
+        /**
+         * Gets the current switch as formatted string.
+         * @param {Object} momentDate A moment date.
+         * @returns {String} The formatted string.
+         */
+        getCurrentSwitchFormatted (momentDate) {
+            const months = this.$t("additional:modules.tools.gfi.themes.trafficCount.datepicker.monthsShort", {returnObjects: true});
+
+            return `${months[momentDate.get("month")]} ${momentDate.format("YYYY")}`;
+        },
+
+        /**
+         * currently unused (in branch G31DEV1-1154-trafficCount-datePickerWeek)
+         * TODO: apply disabled dates when newer version appears
+         * Checks if the a date should be disabled.
+         * @param {Date} date The date in question.
+         * @param {Date[]} currentDates The list of selected dates.
+         * @returns {Boolean} true if disabled, false if enabled.
+         */
+        isDateDisabled (date, currentDates) {
+            if (!(date instanceof Date)) {
+                return true;
+            }
+            const endDate = moment(),
+                startDate = moment("2020-01-01") > moment().subtract(1, "year") ? moment("2020-01-01") : moment().subtract(1, "year").startOf("year"),
+                question = moment(date);
+
+            if (Array.isArray(currentDates) && currentDates.length >= 5) {
+                for (let i = 0; i < 5; i++) {
+                    if (question.isSame(moment(currentDates[i]))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            startDate.subtract(1, "days");
+
+            return question.isSameOrBefore(startDate) || question.isSameOrAfter(endDate);
         }
     }
 };
@@ -244,84 +274,81 @@ export default {
 <template>
     <div>
         <h1>
-          {{ label }}
+            {{ label }}
         </h1>
 
         <div
             :id="'weekDateSelector'+motId"
             class="dateSelector"
         >
-            <div class="input-group">
-                <input
-                    :id="'weekDateInput'+motId"
-                    type="text"
-                    class="form-control dpinput"
-                    placeholder="Datum"
-                >
-                <span class="input-group-btn">
-                    <button
-                        :id="'weekDateInputButton'+motId"
-                        class="btn btn-default weekDateInputButton"
-                        type="button"
-                        @click="toggleCalendar"
-                    >
-                        <span
-                            class="glyphicon glyphicon-th"
-                            aria-hidden="true"
-                        ></span>
-                    </button>
-                </span>
-            </div>
+            <TrafficCountDatePicker
+                type="week"
+                input-delimiter=", "
+                :format="weekFormat"
+                :initial-dates="dates"
+                :show-week-number="true"
+                @change="change"
+            >
+                <template #currentSwitch="{momentDate}">
+                    {{ getCurrentSwitchFormatted(momentDate) }}
+                </template>
+                <template #dateField="{day, momentDate}">
+                    <span
+                        :title="getDateFieldTitle(momentDate)"
+                    >{{ day }}</span>
+                </template>
+            </TrafficCountDatePicker>
         </div>
 
         <TrafficCountCheckbox
-            :tableDiagramId="diagramWeekId"
+            :table-diagram-id="diagramWeekId"
         />
         <div :id="diagramWeekId">
             <TrafficCountCompDiagram
-              v-if='measureName'
-                :apiData="apiData"
-                :setTooltipValue="setTooltipValue"
-                :yAxisTicks="yAxisTicks"
-                :renderLabelXAxis="renderLabelXAxis"
-                :renderLabelYAxis="renderLabelYAxis"
-                :descriptionYAxis="measureName"
-                :renderLabelLegend="renderLabelLegend"
-                :doInterpolate="false"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-tooltip-value="setTooltipValue"
+                :y-axis-ticks="yAxisTicks"
+                :render-label-x-axis="renderLabelXAxis"
+                :render-label-y-axis="renderLabelYAxis"
+                :description-y-axis="measureName"
+                :render-label-legend="renderLabelLegend"
+                :do-interpolate="false"
             />
         </div>
         <TrafficCountCheckbox
-            :tableDiagramId="tableWeekId"
+            :table-diagram-id="tableWeekId"
         />
         <div :id="tableWeekId">
             <TrafficCountCompTable
-              v-if='measureName'
-                :apiData="apiData"
-                :setTableTitle="setTableTitle"
-                :setColTitle="setColTitle"
-                :setRowTitle="setRowTitle"
-                :setFieldValue="setFieldValue"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-table-title="setTableTitle"
+                :set-col-title="setColTitle"
+                :set-row-title="setRowTitle"
+                :set-field-value="setFieldValue"
             />
         </div>
 
         <div class="downloads">
-          <TrafficCountDownloads
-              :label="label"
-              :setVerboseLabel="setTableTitle"
-              currentTabId="week"
-              :api="api"
-              :thingId="thingId"
-              :meansOfTransport="meansOfTransport"
-          />
+            <TrafficCountDownloads
+                :label="label"
+                :set-verbose-label="setTableTitle"
+                current-tab-id="week"
+                :api="api"
+                :thing-id="thingId"
+                :means-of-transport="meansOfTransport"
+            />
         </div>
-
     </div>
 </template>
 
 <style scoped>
-.weekDateInputButton{
-    padding: 6px 12px 5px 12px
-}
+
+h1 {margin-top:20px;}
+
+.input-wrapper { width: 100%; }
+
 .downloads {
   display: flex;
   justify-content: flex-start;

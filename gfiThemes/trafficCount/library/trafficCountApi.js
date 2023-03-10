@@ -1,5 +1,7 @@
-import {SensorThingsHttp} from "../../../../modules/core/modelList/layer/sensorThingsHttp.js";
-import {SensorThingsMqtt} from "../../../../modules/core/modelList/layer/sensorThingsMqtt.js";
+// import {SensorThingsHttp} from "../../../../modules/core/modelList/layer/sensor.js";
+// import {SensorThingsMqtt} from "../../../../modules/core/modelList/layer/sensor.js";
+import {SensorThingsMqtt} from "../../../../src/utils/sensorThingsMqtt.js";
+import {SensorThingsHttp} from "../../../../src/utils/sensorThingsHttp.js";
 import moment from "moment";
 
 // change language from moment.js to german
@@ -144,21 +146,31 @@ export class TrafficCountApi {
      * @returns {Integer|Boolean}  the sum of all found observation results
      */
     getMediumSpeed (datasetSpeed, datasetCount) {
-        if (!this.checkForObservations(datasetSpeed)) { return false; }
-        if (!this.checkForObservations(datasetCount)) { return false; }
+        if (!this.checkForObservations(datasetSpeed)) {
+            return false;
+        }
+        if (!this.checkForObservations(datasetCount)) {
+            return false;
+        }
 
-        let counts = [];
+        const counts = [];
         let countsSum = 0;
+
         datasetCount[0].Datastreams[0].Observations.forEach(observation => {
-            if (!observation.hasOwnProperty("result")) { return; }
+            if (!observation.hasOwnProperty("result")) {
+                return;
+            }
             counts[observation.phenomenonTime] = observation.result;
             countsSum += observation.result;
         });
 
         let weightedTotal = 0;
+
         datasetSpeed[0].Datastreams[0].Observations.forEach(observation => {
-            if (!observation.hasOwnProperty("result")) { return; }
-            weightedTotal += (counts[observation.phenomenonTime] * observation.result);
+            if (!observation.hasOwnProperty("result")) {
+                return;
+            }
+            weightedTotal += counts[observation.phenomenonTime] * observation.result;
         });
         return (weightedTotal / countsSum).toFixed(2);
     }
@@ -297,7 +309,7 @@ export class TrafficCountApi {
                 }
             }
             else {
-                (onerror || this.defaultErrorHandler)("TrafficCountAPI.updateProperty: the response does not include a property "+propertyName+" of the Thing", dataset);
+                (onerror || this.defaultErrorHandler)("TrafficCountAPI.updateProperty: the response does not include a property " + propertyName + " of the Thing", dataset);
             }
         }, onstart, oncomplete, onerror || this.defaultErrorHandler);
     }
@@ -373,8 +385,8 @@ export class TrafficCountApi {
      */
     updateDaySpeedMedium (thingId, meansOfTransportSpeed, meansOfTransportCount, dayInterval, day, onupdate, onerror) {
         let sum = 0;
-        const startDate = moment(day, "YYYY-MM-DD").startOf('day').toISOString(),
-            endDate = moment(day, "YYYY-MM-DD").endOf('day').toISOString(),
+        const startDate = moment(day, "YYYY-MM-DD").startOf("day").toISOString(),
+            endDate = moment(day, "YYYY-MM-DD").endOf("day").toISOString(),
             speedUrl = this.baseUrlHttp + "/Things(" + thingId + ")?$expand=Datastreams($filter=properties/layerName eq '" + meansOfTransportSpeed + this.layerNameInfix + "_" + dayInterval + "';$expand=Observations($filter=phenomenonTime ge " + startDate + " and phenomenonTime lt " + endDate + "))",
             countUrl = this.baseUrlHttp + "/Things(" + thingId + ")?$expand=Datastreams($filter=properties/layerName eq '" + meansOfTransportCount + this.layerNameInfix + "_" + dayInterval + "';$expand=Observations($filter=phenomenonTime ge " + startDate + " and phenomenonTime lt " + endDate + "))";
 
@@ -860,7 +872,7 @@ export class TrafficCountApi {
      * @returns {Void}  -
      */
     getUnitOfMeasurement (thingId, meansOfTransport, interval, onsuccess, onerror, onstart, oncomplete) {
-        let url = this.baseUrlHttp + "/Things(" + thingId + ")?$expand=Datastreams($filter=properties/layerName eq '" + meansOfTransport + this.layerNameInfix + "_" + interval + "')";
+        const url = this.baseUrlHttp + "/Things(" + thingId + ")?$expand=Datastreams($filter=properties/layerName eq '" + meansOfTransport + this.layerNameInfix + "_" + interval + "')";
 
         return this.http.get(url, (dataset) => {
             if (!this.checkForUnits(dataset)) {
@@ -883,7 +895,7 @@ export class TrafficCountApi {
      * @param {Function} [oncomplete] as function() to fire after every async action no matter what
      * @returns {Void}  -
      */
-    getBaseDataStreams(thingId, interval, onsuccess, onerror, onstart, oncomplete) {
+    getBaseDataStreams (thingId, interval, onsuccess, onerror, onstart, oncomplete) {
         const url = this.baseUrlHttp + "/Things(" + thingId + ")/Datastreams?$filter=properties/periodLength eq '" + interval + "'";
 
         return this.http.get(url, (datastreams) => {

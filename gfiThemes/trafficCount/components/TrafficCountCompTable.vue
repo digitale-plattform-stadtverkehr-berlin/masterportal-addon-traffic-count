@@ -114,43 +114,37 @@ export default {
 </script>
 
 <template>
-    <div class="table">
-        <table class="table-responsive table-striped table-condensed table-bordered text-nowrap">
-            <thead>
-                <tr>
-                    <th class="th-first-col">
-                        {{ setTableTitle() }}
-                    </th>
-                    <th
-                        v-for="(value, datetime) in getFirstDataset(apiData)"
-                        :key="datetime"
-                        class="th-rest-cols"
-                    >
-                        {{ setColTitle(datetime) }}
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr
-                    v-for="(dataObjFlat, idx) in getFlatApiData(apiData)"
-                    :key="idx"
-                >
-                    <td class="td-first-col">
-                        {{ setRowTitle(dataObjFlat.key, getFirstKeyOfObject(dataObjFlat.dataset)) }}
-                    </td>
-                    <td
-                        v-for="(value, datetime) of dataObjFlat.dataset"
-                        :key="datetime"
-                    >
-                        {{ setFieldValue(value) }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+  <div style="width:100%; position:relative; height: 120px;">
+    <div class="table-responsive" style="width:100%; position:absolute;">
+      <table class="table table-striped table-condensed table-bordered text-nowrap">
+        <thead>
+          <tr>
+            <th class="th-first-col">
+                {{ setTableTitle() }}
+            </th>
+            <th v-for="(value, datetime) in getFirstDataset(apiData)"
+                :key="datetime"
+                class="th-rest-cols">
+              {{ setColTitle(datetime) }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(dataObjFlat, idx) in getFlatApiData(apiData)" :key="idx">
+            <td class="td-first-col">
+              {{ setRowTitle(dataObjFlat.key, getFirstKeyOfObject(dataObjFlat.dataset)) }}
+            </td>
+            <td v-for="(value, datetime) of dataObjFlat.dataset" :key="datetime">
+              {{ setFieldValue(value) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 </template>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
     div.table {
         margin-top: 5px;
         margin-bottom: 10px;

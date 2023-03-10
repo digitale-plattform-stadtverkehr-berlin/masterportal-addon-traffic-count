@@ -457,7 +457,7 @@ export default {
 <template>
     <div
         id="infos"
-        class="infos tab-pane fade in active"
+        class="infos"
     >
         <div
             id="trafficcount-info-table"
@@ -536,9 +536,9 @@ export default {
     </div>
 </template>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
     #trafficcount-info-table {
-        margin: 6px 0 0 0;
+        h1 {margin-top:20px;}
         table {
             margin: 0;
             tbody {

@@ -1,7 +1,9 @@
 <script>
 import moment from "moment";
-import ExportButtonModel from "../../../../modules/snippets/exportButton/model";
-import ExportButtonView from "../../../../modules/snippets/exportButton/view";
+// import ExportButtonModel from "../../../../modules/snippets/exportButton/model";
+// import ExportButtonView from "../../../../modules/snippets/exportButton/view";
+import ExportButtonModel from "../snippets/exportButton/model";
+import ExportButtonView from "../snippets/exportButton/view";
 
 export default {
     name: "TrafficCountDownloads",
@@ -266,7 +268,7 @@ export default {
     </div>
 </template>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
 @import "~variables";
 
 .button-container {

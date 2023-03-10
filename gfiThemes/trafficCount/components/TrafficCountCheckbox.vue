@@ -82,7 +82,7 @@ export default {
     </div>
 </template>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
   .form-check {
     margin-left: 5px;
   }

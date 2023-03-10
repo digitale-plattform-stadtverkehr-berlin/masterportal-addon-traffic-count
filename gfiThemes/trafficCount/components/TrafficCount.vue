@@ -29,12 +29,16 @@ export default {
             api: null,
             propThingId: 0,
             meansOfTransports: [],
-            meansOfTransportsCount:[],
-            meansOfTransportsSpeed:[],
+            meansOfTransportsCount: [],
+            meansOfTransportsSpeed: [],
             title: "",
             description: "",
             headerProperties: [],
+            hasPhotos: false,
+            headerPhotosUrls: [],
             archiveStartDate: "2020-01-01",
+            dayStartOffset: 0,
+            weekStartOffset: 1,
             meansOfTransport: "",
             currentTabId: "infos",
             keyInfo: "info",
@@ -71,7 +75,7 @@ export default {
 
         descriptionLabel: function () {
             return this.$t("additional:modules.tools.gfi.themes.trafficCount.descriptionLabel");
-        },
+        }
     },
     watch: {
         // When the gfi window switched with arrow, the connection will be refreshed
@@ -96,32 +100,43 @@ export default {
                 this.setComponentKey(newVal);
                 this.setActiveDefaultTab();
             }
-        },
+        }
     },
     created: function () {
         const gfiTheme = this.feature?.getTheme(),
-          gfiParams = gfiTheme?.params;
+            gfiParams = gfiTheme?.params;
 
         this.meansOfTransports = typeof gfiParams === "object" && gfiParams.hasOwnProperty("meansOfTransports") ? gfiParams.meansOfTransports : [];
         this.createDataConnection(this.feature.getProperties(), null).then(() => {
             this.meansOfTransportsCount = this.meansOfTransports.filter(function isCount (mot) {
-                return mot['type'] == "counting";
+                return mot.type == "counting";
             });
             this.meansOfTransportsSpeed = this.meansOfTransports.filter(function isSpeed (mot) {
-                return mot['type'] == "speed";
+                return mot.type == "speed";
             });
 
-            let headerPropertyNames = typeof gfiParams === "object" && gfiParams.hasOwnProperty("headerProperties") ? gfiParams.headerProperties : [];
+            const headerPropertyNames = typeof gfiParams === "object" && gfiParams.hasOwnProperty("headerProperties") ? gfiParams.headerProperties : [];
+
             headerPropertyNames.forEach(hpName => {
-                let headerProperty = {
+                const headerProperty = {
                     name: hpName,
                     label: this.$t("common:trafficCountProperties." + hpName),
                     value: ""
                 };
+
                 this.headerProperties.push(headerProperty);
             });
 
+            // get special property "photos" from properties
+            if (typeof gfiParams === "object" && gfiParams.hasOwnProperty("headerPhotos") && gfiParams.headerPhotos) {
+                this.hasPhotos = true;
+            }
+
             this.archiveStartDate = typeof gfiParams === "object" && gfiParams.hasOwnProperty("archiveStartDate") ? gfiParams.archiveStartDate : this.archiveStartDate;
+
+            this.dayStartOffset = typeof gfiParams === "object" && gfiParams.hasOwnProperty("dayStartOffset") ? gfiParams.dayStartOffset : this.dayStartOffset;
+
+            this.weekStartOffset = typeof gfiParams === "object" && gfiParams.hasOwnProperty("weekStartOffset") ? gfiParams.weekStartOffset : this.weekStartOffset;
 
             this.setHeader(this.api, this.propThingId, this.meansOfTransportsCount[0], this.headerProperties);
             this.setComponentKey(this.propThingId);
@@ -143,7 +158,7 @@ export default {
          * @returns {Void} -
          */
         createDataConnection: function (feature, sensorThingsApiOpt = null) {
-            return new Promise ((resolve) => {
+            return new Promise((resolve) => {
                 const thingId = feature["@iot.id"],
                     url = feature.requestUrl,
                     sensorThingsApiVersion = "v" + feature.versionUrl,
@@ -157,14 +172,15 @@ export default {
                 this.api = new TrafficCountCache(url, sensorThingsApiVersion, mqttOptions, sensorThingsApiOpt);
                 this.propThingId = thingId;
 
-                const tcApi = new TrafficCountApi(url, sensorThingsApiVersion, mqttOptions, sensorThingsApiOpt);
-                const interval = this.meansOfTransports[0].dayInterval;
+                const tcApi = new TrafficCountApi(url, sensorThingsApiVersion, mqttOptions, sensorThingsApiOpt),
+                    interval = this.meansOfTransports[0].dayInterval;
+
                 tcApi.getBaseDataStreams(thingId, interval, datastreams => {
                     feature.Datastreams = datastreams;
                 }, false, false, () => {
                     for (let i = 0; i < this.meansOfTransports.length; i++) {
-                        this.meansOfTransports[i]["stream"] =
-                            this.getMeansOfTransportFromDatastream(feature.Datastreams, [this.meansOfTransports[i]["id"]]);
+                        this.meansOfTransports[i].stream =
+                            this.getMeansOfTransportFromDatastream(feature.Datastreams, [this.meansOfTransports[i].id]);
                     }
                     resolve();
 
@@ -251,17 +267,28 @@ export default {
 
             // values of header properties
             this.headerProperties.forEach(headerProperty => {
-              api.updateProperty(thingId, headerProperty.name, hpValue => {
-                this.setHeaderProperty(headerProperty.name, hpValue);
-              }, errormsg => {
-                this.setHeaderProperty(headerProperty.name, "(nicht bekannt)");
-                console.warn("The header property received is incomplete:", errormsg);
-              });
+                api.updateProperty(thingId, headerProperty.name, hpValue => {
+                    this.setHeaderProperty(headerProperty.name, hpValue);
+                }, errormsg => {
+                    this.setHeaderProperty(headerProperty.name, "(nicht bekannt)");
+                    console.warn("The header property received is incomplete:", errormsg);
+                });
             });
+
+            // photos from header getProperties
+            if (this.hasPhotos) {
+                api.updateProperty(thingId, "photos", urlArray => {
+                    this.headerPhotosUrls = urlArray;
+                }, errormsg => {
+                // this.setHeaderPhotos("fallback.png");
+                    this.headerPhotosUrls = [];
+                    console.warn("The header property photos is invalid:", errormsg);
+                });
+            }
 
             // means of transport
             if (meansOfTransport) {
-                this.meansOfTransport = meansOfTransport["label"];
+                this.meansOfTransport = meansOfTransport.label;
             }
             else {
                 this.meansOfTransport = "";
@@ -293,11 +320,11 @@ export default {
          * @returns {Void}  -
          */
         setHeaderProperty: function (name, value) {
-          this.headerProperties.forEach(headerProperty => {
-            if (headerProperty.name == name) {
-              headerProperty.value = value;
-            }
-          });
+            this.headerProperties.forEach(headerProperty => {
+                if (headerProperty.name == name) {
+                    headerProperty.value = value;
+                }
+            });
         },
 
         /**
@@ -317,18 +344,20 @@ export default {
          * @returns {void}  -
          */
         setGfiDiagramWidth: function () {
-            let gfiWrapper = document.querySelector(".gfi-detached");
+            const gfiWrapper = document.querySelector(".gfi-detached");
+
             if (gfiWrapper) {
-              gfiWrapper.style.right = "auto";
-              gfiWrapper.style.left = "0px";
-              gfiWrapper.style.top = "0px";
-              gfiWrapper.style.width = "98%";
-              gfiWrapper.style.maxWidth = "992px";
+                gfiWrapper.style.right = "auto";
+                gfiWrapper.style.left = "0px";
+                gfiWrapper.style.top = "0px";
+                gfiWrapper.style.width = "98%";
+                gfiWrapper.style.maxWidth = "992px";
             }
-            let gfiContent = document.querySelector(".gfi-content");
+            const gfiContent = document.querySelector(".gfi-content");
+
             if (gfiContent) {
-              gfiContent.style.width = "100%";
-              gfiContent.style.maxWidth = "none";
+                gfiContent.style.width = "100%";
+                gfiContent.style.maxWidth = "none";
             }
         }
     }
@@ -338,110 +367,139 @@ export default {
 <template>
     <div class="trafficCount-gfi">
         <div class="header">
-            <b>{{ idLabel }}:</b> {{ title }}<br><br>
-            <b>{{ descriptionLabel }}:</b><br>{{ description }}<br><br>
-            <span v-for="headerProperty in headerProperties">
-                <b>{{ headerProperty.label }}:</b> {{ headerProperty.value }}<br>
-            </span>
+            <div class="properties">
+                <b>{{ idLabel }}:</b> {{ title }}<br><br>
+                <b>{{ descriptionLabel }}:</b><br>{{ description }}<br><br>
+                <span v-for="headerProperty in headerProperties">
+                    <b>{{ headerProperty.label }}:</b> {{ headerProperty.value }}<br>
+                </span>
+            </div>
+            <div
+                v-if="hasPhotos"
+                class="photos"
+            >
+                <img
+                    v-for="srcUrl in headerPhotosUrls"
+                    :src="srcUrl"
+                    :alt="srcUrl"
+                >
+            </div>
         </div>
 
         <div>
             <ul
-                class="nav nav-pills"
+                class="nav nav-tabs"
                 @click="setCurrentTabId"
             >
                 <li
                     value="infos"
-                    class="active"
+                    class="nav-item"
+                    :class="(currentTabId == 'infos') ? 'active' : ''"
                 >
                     <a
-                        data-toggle="tab"
                         href="#infos"
+                        class="nav-link"
                     >{{ infoLabel }}</a>
                 </li>
-                <li value="day">
+                <li
+                    value="day"
+                    class="nav-item"
+                    :class="(currentTabId == 'day') ? 'active' : ''"
+                >
                     <a
-                        data-toggle="tab"
                         href="#day"
+                        class="nav-link"
                     >{{ dayLabel }}</a>
                 </li>
-                <li value="week">
+                <li
+                    value="week"
+                    class="nav-item"
+                    :class="(currentTabId == 'week') ? 'active' : ''"
+                >
                     <a
-                        data-toggle="tab"
                         href="#week"
+                        class="nav-link"
                     >{{ weekLabel }}</a>
                 </li>
-                <li value="year">
+                <li
+                    value="year"
+                    class="nav-item"
+                    :class="(currentTabId == 'year') ? 'active' : ''"
+                >
                     <a
-                        data-toggle="tab"
                         href="#year"
+                        class="nav-link"
                     >{{ yearLabel }}</a>
                 </li>
             </ul>
             <div class="tab-content">
-              <div
-                id="infos"
-                :key="keyInfo"
-                class="tab-pane fade in active"
-              >
-                <TrafficCountInfo v-for="(mot, index) in meansOfTransports"
-                                  v-if="mot['showOnInfoTab'] !== false"
-                    :label="mot['label']"
-                    :motType="mot['type']"
-                    :api="api"
-                    :thingId="propThingId"
-                    :meansOfTransport="mot['stream']"
-                    :motDayInterval="mot['dayInterval']"
-                />
-              </div>
-              <div
-                id="day"
-                :key="keyDay"
-                class="tab-pane fade"
-              >
-                <TrafficCountDay v-for="(mot, index) in meansOfTransports"
-                    :label="mot['label']"
-                    :motId="mot['id']"
-                    :motType="mot['type']"
-                    :motDayInterval="mot['dayInterval']"
-                    :api="api"
-                    :thingId="propThingId"
-                    :meansOfTransport="mot['stream']"
-                />
-              </div>
+                <div
+                    :key="keyInfo"
+                    :class="(currentTabId == 'infos') ? 'd-block' : 'd-none'"
+                >
+                    <TrafficCountInfo
+                        v-for="(mot, index) in meansOfTransports"
+                        v-if="mot['showOnInfoTab'] !== false"
+                        :label="mot['label']"
+                        :mot-type="mot['type']"
+                        :api="api"
+                        :thing-id="propThingId"
+                        :means-of-transport="mot['stream']"
+                        :mot-day-interval="mot['dayInterval']"
+                    />
+                </div>
+                <div
+                    :key="keyDay"
+                    :class="(currentTabId == 'day') ? 'd-block' : 'd-none'"
+                >
+                    <TrafficCountDay
+                        v-for="(mot, index) in meansOfTransports"
+                        v-if="mot['stream']"
+                        :label="mot['label']"
+                        :mot-id="mot['id']"
+                        :mot-type="mot['type']"
+                        :mot-day-interval="mot['dayInterval']"
+                        :api="api"
+                        :thing-id="propThingId"
+                        :means-of-transport="mot['stream']"
+                        :day-start-offset="dayStartOffset"
+                    />
+                </div>
 
-              <div
-                id="week"
-                :key="keyWeek"
-                class="tab-pane fade"
-              >
-                <TrafficCountWeek v-for="(mot, index) in meansOfTransports"
-                    :label="mot['label']"
-                    :motId="mot['id']"
-                    :motType="mot['type']"
-                    :api="api"
-                    :thingId="propThingId"
-                    :meansOfTransport="mot['stream']"
-                    :archiveStartDate="archiveStartDate"
-                />
-              </div>
+                <div
+                    :key="keyWeek"
+                    :class="(currentTabId == 'week') ? 'd-block' : 'd-none'"
+                >
+                    <TrafficCountWeek
+                        v-for="(mot, index) in meansOfTransports"
+                        v-if="mot['stream']"
+                        :label="mot['label']"
+                        :mot-id="mot['id']"
+                        :mot-type="mot['type']"
+                        :api="api"
+                        :thing-id="propThingId"
+                        :means-of-transport="mot['stream']"
+                        :archive-start-date="archiveStartDate"
+                        :week-start-offset="weekStartOffset"
+                    />
+                </div>
 
-              <div
-                id="year"
-                :key="keyYear"
-                class="tab-pane fade"
-              >
-                <TrafficCountYear v-for="(mot, index) in meansOfTransports"
-                    :label="mot['label']"
-                    :motId="mot['id']"
-                    :motType="mot['type']"
-                    :api="api"
-                    :thingId="propThingId"
-                    :meansOfTransport="mot['stream']"
-                    :archiveStartDate="archiveStartDate"
-                />
-              </div>
-
+                <div
+                    :key="keyYear"
+                    :class="(currentTabId == 'year') ? 'd-block' : 'd-none'"
+                >
+                    <TrafficCountYear
+                        v-for="(mot, index) in meansOfTransports"
+                        v-if="mot['stream']"
+                        :label="mot['label']"
+                        :mot-id="mot['id']"
+                        :mot-type="mot['type']"
+                        :api="api"
+                        :thing-id="propThingId"
+                        :means-of-transport="mot['stream']"
+                        :archive-start-date="archiveStartDate"
+                    />
+                </div>
             </div>
         </div>
 
@@ -449,15 +507,14 @@ export default {
         <TrafficCountFooter
             class="footer"
             :api="api"
-            :thingId="propThingId"
-            :meansOfTransport="meansOfTransports[0]['stream']"
-            :motDayInterval="meansOfTransports[0]['dayInterval']"
+            :thing-id="propThingId"
+            :means-of-transport="meansOfTransports[0]['stream']"
+            :mot-day-interval="meansOfTransports[0]['dayInterval']"
         />
-
     </div>
 </template>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
 .trafficCount-gfi {
     padding: 10px 15px 0 15px;
     @media (max-width: 600px) {
@@ -473,19 +530,44 @@ export default {
     .header {
         margin: 0 0 30px 0;
         padding: 0;
+        display: flex;
+        justify-content: space-between;
+        .properties {
+          box-sizing: border-box;
+          margin-right: 16px;
+        }
+        .photos {
+          width: 35%;
+          box-sizing: border-box;
+          img {
+            max-width: 100%;
+          }
+        }
     }
     .tab-content {
       border: 1px solid grey;
       padding: 0 5px;
     }
-    ul.nav-pills {
+    ul.nav-tabs {
       li {
         margin: 0;
         border-top: 1px solid grey;
         border-right: 1px solid grey;
+        a {
+          padding: 0.5rem 1rem;
+        }
+        a:hover {
+          background-color: #eee;
+        }
       }
       li:first-child {
         border-left: 1px solid grey;
+      }
+      li.active {
+        a {
+          color: #fff;
+          background-color: #337ab7;
+        }
       }
     }
     .footer {

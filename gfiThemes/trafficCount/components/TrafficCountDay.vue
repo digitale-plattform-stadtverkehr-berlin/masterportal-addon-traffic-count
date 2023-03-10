@@ -5,8 +5,10 @@ import TrafficCountCheckbox from "./TrafficCountCheckbox.vue";
 import TrafficCountDownloads from "./TrafficCountDownloads.vue";
 import thousandsSeparator from "../../../../src/utils/thousandsSeparator.js";
 import moment from "moment";
-import DatepickerModel from "../../../../modules/snippets/datepicker/model";
-import DatepickerView from "../../../../modules/snippets/datepicker/view";
+
+import DatePicker from "vue2-datepicker";
+import "vue2-datepicker/index.css";
+
 import {addMissingDataDay} from "../library/addMissingData.js";
 
 export default {
@@ -15,7 +17,8 @@ export default {
         TrafficCountCompDiagram,
         TrafficCountCompTable,
         TrafficCountDownloads,
-        TrafficCountCheckbox
+        TrafficCountCheckbox,
+        DatePicker
     },
     props: {
         label: {
@@ -23,17 +26,21 @@ export default {
             required: true
         },
         motId: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         motType: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         motDayInterval: {
-          type: String,
-          required: false,
-          default: "5-min"
+            type: String,
+            required: false,
+            default: "5-min"
+        },
+        dayStartOffset: {
+            type: Number,
+            required: true
         },
         api: {
             type: Object,
@@ -45,14 +52,15 @@ export default {
         },
         meansOfTransport: {
             type: String,
-            default: "undefined",
-            required: false
+            // default: "undefined",
+            required: true
         }
     },
     data () {
         return {
             dayDatepicker: null,
             apiData: [],
+            dates: [],
 
             // props for diagram
             setTooltipValue: (tooltipItem) => {
@@ -68,7 +76,7 @@ export default {
             },
 
             // will be set on mount
-            measureName: null,  //this.$t("additional:modules.tools.gfi.themes.trafficCount.yAxisTextDay");
+            measureName: null, // this.$t("additional:modules.tools.gfi.themes.trafficCount.yAxisTextDay");
 
             renderLabelLegend: (datetime) => {
                 return moment(datetime, "YYYY-MM-DD HH:mm:ss").format("DD.MM.YYYY");
@@ -78,15 +86,16 @@ export default {
             setTableTitle: () => {
                 if (this.motType == "speed") {
                     return this.label + " " + this.measureName;
-                } else {
-                    return this.label;
                 }
+                return this.label;
+
             },
             setColTitle: datetime => {
                 return moment(datetime, "YYYY-MM-DD HH:mm:ss").format("HH:mm") + " " + this.$t("additional:modules.tools.gfi.themes.trafficCount.clockLabel");
             },
             setRowTitle: (meansOfTransports, datetime) => {
                 const txt = moment(datetime, "YYYY-MM-DD HH:mm:ss").format("DD.MM.YYYY");
+
                 return txt;
             },
             setFieldValue: value => {
@@ -94,66 +103,38 @@ export default {
             },
             // dayInterval: "5-Min",
             dayInterval: this.motDayInterval,
-            diagramDayId: "diagramDay"+this.motId,
-            tableDayId: "tableDay"+this.motId
+            diagramDayId: "diagramDay" + this.motId,
+            tableDayId: "tableDay" + this.motId
         };
+    },
+    watch: {
+        dates (value) {
+            this.dayDatepickerValueChanged(value);
+        }
     },
     mounted () {
         moment.locale(i18next.language);
-
-        if (this.meansOfTransport !== "undefined")
-            this.setDayDatepicker();
+        this.initializeDates();
         this.setMeasureName();
     },
     methods: {
-        setMeasureName: function() {
-          const api = this.api;
-          const thingId = this.thingId;
-          const meansOfTransport = this.meansOfTransport;
-          const interval = this.dayInterval;
-
-          api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
-            // console.log("received units symbol "+units.symbol);
-            this.measureName = units.symbol;
-          }, errorUnits => {
-            // console.log("received errornous symbol");
-            this.measureName = "??";
-          }, false, false);
+        initializeDates () {
+            this.dates = [moment().toDate()];
         },
 
-        setDayDatepicker: function () {
-            const startDate = moment().subtract(7, "days");
+        setMeasureName: function () {
+            const api = this.api,
+                thingId = this.thingId,
+                meansOfTransport = this.meansOfTransport,
+                interval = this.dayInterval;
 
-            if (!this.dayDatepicker) {
-                this.dayDatepicker = new DatepickerModel({
-                    displayName: "Tag",
-                    multidate: 5,
-                    preselectedValue: moment().toDate(),
-                    startDate: startDate.toDate(),
-                    endDate: moment().toDate(),
-                    type: "datepicker",
-                    inputs: $(document.getElementById("dayDateInput"+this.motId)),
-                    todayHighlight: false,
-                    language: i18next.language
-                });
-
-                this.dayDatepicker.on("valuesChanged", function (evt) {
-                    let date = evt.attributes.date;
-
-                    if (date && !Array.isArray(date)) {
-                        date = [date];
-                    }
-                    this.dayDatepickerValueChanged(date);
-                }.bind(this));
-
-                if (document.querySelector("#dayDateSelector"+this.motId)) {
-                    document.querySelector("#dayDateSelector"+this.motId).appendChild(new DatepickerView({model: this.dayDatepicker}).render().el);
-                }
-                this.dayDatepicker.updateValues(moment().toDate());
-            }
-            else if (document.querySelector("#dayDateSelector"+this.motId)) {
-                document.querySelector("#dayDateSelector"+this.motId).appendChild(new DatepickerView({model: this.dayDatepicker}).render().el);
-            }
+            api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
+            // console.log("received units symbol "+units.symbol);
+                this.measureName = units.symbol;
+            }, errorUnits => {
+            // console.log("received errornous symbol");
+                this.measureName = "??";
+            }, false, false);
         },
 
         /**
@@ -168,54 +149,74 @@ export default {
                 meansOfTransport = this.meansOfTransport,
                 timeSettings = [];
 
-            if (dates.length === 0) {
-                this.apiData = [];
-            }
-            else {
-                dates.sort((earlyDate, lateDate) => {
-                    // Showing earlier date first
-                    return earlyDate - lateDate;
-                }).forEach(date => {
-                    const fromDate = moment(date).format("YYYY-MM-DD");
-
-                    timeSettings.push({
-                        interval: this.dayInterval,
-                        from: fromDate,
-                        until: fromDate
-                    });
-                });
-
-                api.updateDataset(thingId, meansOfTransport, timeSettings, datasets => {
-                    if (Array.isArray(datasets)) {
-                        datasets.forEach((transportData, idx) => {
-                            const from = typeof timeSettings[idx] === "object" ? timeSettings[idx].from + " 00:00:00" : "";
-
-                            Object.keys(transportData).forEach(transportKey => {
-                                datasets[idx][transportKey] = addMissingDataDay(from, datasets[idx][transportKey], parseInt(this.dayInterval));
-                            });
-                        });
-                    }
-                    this.apiData = datasets;
-                }, errormsg => {
+            if (dates) {
+                if (!Array.isArray(dates) || dates.length === 0) {
                     this.apiData = [];
+                }
+                else {
+                    [...dates].sort((earlyDate, lateDate) => {
+                        // Showing earlier date first
+                        return earlyDate - lateDate;
+                    }).forEach(date => {
+                        const fromDate = moment(date).format("YYYY-MM-DD");
 
-                    console.warn("The data received from api are incomplete:", errormsg);
-                    Radio.trigger("Alert", "alert", {
-                        content: "Die gewünschten Daten wurden wegen eines API-Fehlers nicht korrekt empfangen.",
-                        category: "Info"
+                        timeSettings.push({
+                            interval: this.dayInterval,
+                            from: fromDate,
+                            until: fromDate
+                        });
                     });
-                });
+
+                    api.updateDataset(thingId, meansOfTransport, timeSettings, datasets => {
+                        if (Array.isArray(datasets)) {
+                            datasets.forEach((transportData, idx) => {
+                                const from = typeof timeSettings[idx] === "object" ? timeSettings[idx].from + " 00:00:00" : "";
+
+                                Object.keys(transportData).forEach(transportKey => {
+                                    datasets[idx][transportKey] = addMissingDataDay(from, datasets[idx][transportKey], parseInt(this.dayInterval));
+                                });
+                            });
+                        }
+                        this.apiData = datasets;
+                    }, errormsg => {
+                        this.apiData = [];
+
+                        console.warn("The data received from api are incomplete:", errormsg);
+                        Radio.trigger("Alert", "alert", {
+                            content: "Die gewünschten Daten wurden wegen eines API-Fehlers nicht korrekt empfangen.",
+                            category: "Info"
+                        });
+                    });
+                }
             }
         },
 
         /**
-         * opens the calender
-         * @returns {Void}  -
+         * Checks if the a date should be disabled.
+         * @param {Date} date The date in question.
+         * @param {Date[]} currentDates The list of selected dates.
+         * @returns {Boolean} true if disabled, false if enabled.
          */
-        toggleCalendar: function () {
-            const input = this.$el.querySelector("input");
+        isDateDisabled (date, currentDates) {
+            if (!(date instanceof Date)) {
+                return true;
+            }
+            const endDate = moment(),
+                startDate = moment().subtract(7, "days"),
+                question = moment(date);
 
-            input.focus();
+            if (Array.isArray(currentDates) && currentDates.length >= 5) {
+                for (let i = 0; i < 5; i++) {
+                    if (question.isSame(moment(currentDates[i]))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            startDate.subtract(1, "days");
+
+            return question.isSameOrBefore(startDate) || question.isSameOrAfter(endDate);
         }
     }
 };
@@ -223,84 +224,72 @@ export default {
 
 <template>
     <div>
-        <h1>
-          {{ label }}
-        </h1>
+        <h1>{{ label }}</h1>
         <div
             :id="'dayDateSelector'+motId"
             class="dateSelector"
         >
-            <div class="input-group">
-                <input
-                    :id="'dayDateInput'+motId"
-                    type="text"
-                    class="form-control dpinput"
-                    placeholder="Datum"
-                >
-                <span class="input-group-btn">
-                    <button
-                        :id="'dayDateInputButton'+motId"
-                        class="btn btn-default dayDateInputButton"
-                        type="button"
-                        @click="toggleCalendar"
-                    >
-                        <span
-                            class="glyphicon glyphicon-th"
-                            aria-hidden="true"
-                        ></span>
-                    </button>
-                </span>
-            </div>
+            <DatePicker
+                v-model="dates"
+                aria-label="Datum"
+                placeholder="Datum"
+                type="date"
+                format="DD.MM.YYYY"
+                :multiple="true"
+                :show-week-number="true"
+                :disabled-date="isDateDisabled"
+                title-format="DD.MM.YYYY"
+                :lang="$t('common:libraries.vue2-datepicker.lang', {returnObjects: true})"
+            />
         </div>
-        <TrafficCountCheckbox
-            :tableDiagramId="diagramDayId"
-        />
+        <TrafficCountCheckbox :table-diagram-id="diagramDayId" />
         <div :id="diagramDayId">
             <TrafficCountCompDiagram
-              v-if='measureName'
-                :apiData="apiData"
-                :setTooltipValue="setTooltipValue"
-                :xAxisTicks="xAxisTicks"
-                :yAxisTicks="yAxisTicks"
-                :renderLabelXAxis="renderLabelXAxis"
-                :renderLabelYAxis="renderLabelYAxis"
-                :descriptionYAxis="measureName"
-                :renderLabelLegend="renderLabelLegend"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-tooltip-value="setTooltipValue"
+                :x-axis-ticks="xAxisTicks"
+                :y-axis-ticks="yAxisTicks"
+                :render-label-x-axis="renderLabelXAxis"
+                :render-label-y-axis="renderLabelYAxis"
+                :description-y-axis="measureName"
+                :render-label-legend="renderLabelLegend"
             />
         </div>
         <TrafficCountCheckbox
-            :tableDiagramId="tableDayId"
+            :table-diagram-id="tableDayId"
         />
         <div :id="tableDayId">
             <TrafficCountCompTable
-              v-if='measureName'
-                :apiData="apiData"
-                :setTableTitle="setTableTitle"
-                :setColTitle="setColTitle"
-                :setRowTitle="setRowTitle"
-                :setFieldValue="setFieldValue"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-table-title="setTableTitle"
+                :set-col-title="setColTitle"
+                :set-row-title="setRowTitle"
+                :set-field-value="setFieldValue"
             />
         </div>
 
         <div class="downloads">
-          <TrafficCountDownloads
-              :label="label"
-              :setVerboseLabel="setTableTitle"
-              currentTabId="day"
-              :api="api"
-              :thingId="thingId"
-              :motDayInterval="motDayInterval"
-              :meansOfTransport="meansOfTransport"
-          />
+            <TrafficCountDownloads
+                :label="label"
+                :set-verbose-label="setTableTitle"
+                current-tab-id="day"
+                :api="api"
+                :thing-id="thingId"
+                :mot-day-interval="motDayInterval"
+                :means-of-transport="meansOfTransport"
+            />
         </div>
-
     </div>
 </template>
 
 <style scoped>
-.dayDateInputButton{
-  padding: 6px 12px 5px 12px
-}
+
+h1 {margin-top:20px;}
+
+.mx-datepicker { width: 100%; }
+
 .downloads {
   display: flex;
   justify-content: flex-start;

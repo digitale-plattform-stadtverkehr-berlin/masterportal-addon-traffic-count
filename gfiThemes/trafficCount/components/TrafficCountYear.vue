@@ -5,8 +5,8 @@ import TrafficCountCheckbox from "./TrafficCountCheckbox.vue";
 import TrafficCountDownloads from "./TrafficCountDownloads.vue";
 import thousandsSeparator from "../../../../src/utils/thousandsSeparator.js";
 import moment from "moment";
-import DatepickerModel from "../../../../modules/snippets/datepicker/model";
-import DatepickerView from "../../../../modules/snippets/datepicker/view";
+import DatePicker from "vue2-datepicker";
+import "vue2-datepicker/index.css";
 import {addMissingDataYear} from "../library/addMissingData.js";
 
 export default {
@@ -15,7 +15,8 @@ export default {
         TrafficCountCompDiagram,
         TrafficCountCompTable,
         TrafficCountDownloads,
-        TrafficCountCheckbox
+        TrafficCountCheckbox,
+        DatePicker
     },
     props: {
         label: {
@@ -23,12 +24,12 @@ export default {
             required: true
         },
         motId: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         motType: {
-          type: String,
-          required: true
+            type: String,
+            required: true
         },
         api: {
             type: Object,
@@ -46,12 +47,12 @@ export default {
         archiveStartDate: {
             type: String,
             required: true
-        },
+        }
     },
     data () {
         return {
-            yearDatepicker: null,
             apiData: [],
+            dates: [],
 
             // props for diagram
             setTooltipValue: (tooltipItem) => {
@@ -73,7 +74,7 @@ export default {
 
             // will be set on mount
             measureName: null,
-            //descriptionYAxis: this.$t("additional:modules.tools.gfi.themes.trafficCount.yAxisTextYear"),
+            // descriptionYAxis: this.$t("additional:modules.tools.gfi.themes.trafficCount.yAxisTextYear"),
 
             renderLabelLegend: (datetime) => {
                 return moment(datetime, "YYYY-MM-DD HH:mm:ss").add(3, "days").format("YYYY");
@@ -83,9 +84,9 @@ export default {
             setTableTitle: () => {
                 if (this.motType == "speed") {
                     return this.label + " " + this.measureName;
-                } else {
-                    return this.label;
                 }
+                return this.label;
+
             },
 
             setColTitle: datetime => {
@@ -94,79 +95,44 @@ export default {
             setRowTitle: (meansOfTransports, datetime) => {
                 // datetime is the monday of the week - so we have to add 3 days to get the thursday of the week
                 const txt = moment(datetime, "YYYY-MM-DD HH:mm:ss").add(3, "days").format("YYYY");
+
                 return txt;
             },
             setFieldValue: value => {
                 return thousandsSeparator(value);
             },
             yearInterval: "1-Woche",
-            diagramYearId: "diagramYear"+this.motId,
-            tableYearId: "tableYear"+this.motId
+            diagramYearId: "diagramYear" + this.motId,
+            tableYearId: "tableYear" + this.motId
         };
     },
+    watch: {
+        dates (value) {
+            this.yearDatepickerValueChanged(value);
+        }
+    },
     mounted () {
-        if (this.meansOfTransport !== "undefined")
-            this.setYearDatepicker();
+        moment.locale(i18next.language);
+        this.initializeDates();
         this.setMeasureName();
     },
     methods: {
-      setMeasureName: function() {
-        const api = this.api;
-        const thingId = this.thingId;
-        const meansOfTransport = this.meansOfTransport;
-        const interval = this.yearInterval;
+        initializeDates () {
+            this.dates = [moment().toDate()];
+        },
+        setMeasureName: function () {
+            const api = this.api,
+                thingId = this.thingId,
+                meansOfTransport = this.meansOfTransport,
+                interval = this.yearInterval;
 
-        api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
-          // console.log("received units symbol "+units.symbol);
-          this.measureName = units.symbol;
-        }, errorUnits => {
-          // console.log("received errornous symbol");
-          this.measureName = "??";
-        }, false, false);
-      },
-
-        /**
-         * Setup of the year tab.
-         * This methode creates a datepicker model and triggers the view for rendering. Snippets must be added after view.render.
-         * @listens Snippets#ValuesChanged
-         * @returns {Void}  -
-         */
-        setYearDatepicker: function () {
-            const startDate = moment(this.archiveStartDate);
-
-            // create datepicker only on first enter of tab
-            if (!this.yearDatepicker) {
-                this.yearDatepicker = new DatepickerModel({
-                    displayName: "Tag",
-                    preselectedValue: moment().startOf("year").toDate(),
-                    multidate: 5,
-                    startDate: startDate.toDate(),
-                    endDate: moment().startOf("year").toDate(),
-                    type: "datepicker",
-                    minViewMode: "years",
-                    maxViewMode: "years",
-                    inputs: $(document.getElementById("yearDateInput"+this.motId)),
-                    format: "yyyy",
-                    language: i18next.language
-                });
-
-                this.yearDatepicker.on("valuesChanged", function (evt) {
-                    let date = evt.attributes.date;
-
-                    if (date && !Array.isArray(date)) {
-                        date = [date];
-                    }
-                    this.yearDatepickerValueChanged(date);
-                }.bind(this));
-
-                if (document.querySelector("#yearDateSelector"+this.motId)) {
-                    document.querySelector("#yearDateSelector"+this.motId).appendChild(new DatepickerView({model: this.yearDatepicker}).render().el);
-                }
-                this.yearDatepicker.updateValues(moment().toDate());
-            }
-            else if (document.querySelector("#yearDateSelector"+this.motId)) {
-                document.querySelector("#yearDateSelector"+this.motId).appendChild(new DatepickerView({model: this.yearDatepicker}).render().el);
-            }
+            api.getUnitOfMeasurement(thingId, meansOfTransport, interval, units => {
+                // console.log("received units symbol "+units.symbol);
+                this.measureName = units.symbol;
+            }, errorUnits => {
+                // console.log("received errornous symbol");
+                this.measureName = "??";
+            }, false, false);
         },
 
         /** Function is initially triggered and on update
@@ -180,11 +146,11 @@ export default {
                 meansOfTransport = this.meansOfTransport,
                 timeSettings = [];
 
-            if (dates.length === 0) {
+            if (!Array.isArray(dates) || dates.length === 0) {
                 this.apiData = [];
             }
             else {
-                dates.sort((earlyDate, lateDate) => {
+                [...dates].sort((earlyDate, lateDate) => {
                     // Showing earlier date first
                     return earlyDate - lateDate;
                 }).forEach(date => {
@@ -223,13 +189,36 @@ export default {
         },
 
         /**
-         * opens the calender
-         * @returns {void}
+         * Checks if the a date should be disabled.
+         * @param {Date} date The date in question.
+         * @param {Date[]} currentDates The list of selected dates.
+         * @returns {Boolean} true if disabled, false if enabled.
          */
-        toggleCalendar: function () {
-            const input = this.$el.querySelector("input");
+        isDateDisabled (date, currentDates) {
+            if (!(date instanceof Date)) {
+                return true;
+            }
+            const endDate = this.checkGurlittInsel ? moment().subtract(1, "days") : moment(),
+                startMoment = moment().startOf("year").subtract(10, "years"),
+                startYear = parseInt(startMoment.format("YYYY"), 10),
+                question = moment(date);
 
-            input.focus();
+            if (startYear < 2015) {
+                startMoment.add(2015 - startYear, "years");
+            }
+
+            startMoment.subtract(1, "year");
+
+            if (Array.isArray(currentDates) && currentDates.length >= 5) {
+                for (let i = 0; i < 5; i++) {
+                    if (question.isSame(moment(currentDates[i]))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            return question.isSameOrBefore(startMoment) || question.isSameOrAfter(endDate);
         }
     }
 };
@@ -238,84 +227,73 @@ export default {
 <template>
     <div>
         <h1>
-          {{ label }}
+            {{ label }}
         </h1>
 
         <div
             :id="'yearDateSelector'+motId"
             class="dateSelector"
         >
-            <div class="input-group">
-                <input
-                    :id="'yearDateInput'+motId"
-                    type="text"
-                    class="form-control dpinput"
-                    placeholder="Datum"
-                >
-                <span class="input-group-btn">
-                    <button
-                        :id="'yearDateInputButton'+motId"
-                        class="btn btn-default yearDateInputButton"
-                        type="button"
-                        @click="toggleCalendar"
-                    >
-                        <span
-                            class="glyphicon glyphicon-th"
-                            aria-hidden="true"
-                        ></span>
-                    </button>
-                </span>
-            </div>
+            <DatePicker
+                v-model="dates"
+                aria-label="Datum"
+                placeholder="Datum"
+                type="year"
+                format="YYYY"
+                :multiple="true"
+                :disabled-date="isDateDisabled"
+                title-format="YYYY"
+                :lang="$t('common:libraries.vue2-datepicker.lang', {returnObjects: true})"
+            />
         </div>
 
         <TrafficCountCheckbox
-            :tableDiagramId="diagramYearId"
+            :table-diagram-id="diagramYearId"
         />
         <div :id="diagramYearId">
             <TrafficCountCompDiagram
-              v-if='measureName'
-                :apiData="apiData"
-                :setTooltipValue="setTooltipValue"
-                :yAxisTicks="yAxisTicks"
-                :renderLabelXAxis="renderLabelXAxis"
-                :renderLabelYAxis="renderLabelYAxis"
-                :descriptionYAxis="measureName"
-                :renderLabelLegend="renderLabelLegend"
-                :doInterpolate="false"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-tooltip-value="setTooltipValue"
+                :y-axis-ticks="yAxisTicks"
+                :render-label-x-axis="renderLabelXAxis"
+                :render-label-y-axis="renderLabelYAxis"
+                :description-y-axis="measureName"
+                :render-label-legend="renderLabelLegend"
+                :do-interpolate="false"
             />
         </div>
         <TrafficCountCheckbox
-            :tableDiagramId="tableYearId"
+            :table-diagram-id="tableYearId"
         />
         <div :id="tableYearId">
             <TrafficCountCompTable
-              v-if='measureName'
-                :apiData="apiData"
-                :setTableTitle="setTableTitle"
-                :setColTitle="setColTitle"
-                :setRowTitle="setRowTitle"
-                :setFieldValue="setFieldValue"
+                v-if="measureName"
+                :api-data="apiData"
+                :set-table-title="setTableTitle"
+                :set-col-title="setColTitle"
+                :set-row-title="setRowTitle"
+                :set-field-value="setFieldValue"
             />
         </div>
 
         <div class="downloads">
-          <TrafficCountDownloads
-              :label="label"
-              :setVerboseLabel="setTableTitle"
-              currentTabId="year"
-              :api="api"
-              :thingId="thingId"
-              :meansOfTransport="meansOfTransport"
-          />
+            <TrafficCountDownloads
+                :label="label"
+                :set-verbose-label="setTableTitle"
+                current-tab-id="year"
+                :api="api"
+                :thing-id="thingId"
+                :means-of-transport="meansOfTransport"
+            />
         </div>
-
     </div>
 </template>
 
 <style scoped>
-.yearDateInputButton{
-    padding: 6px 12px 5px 12px
-}
+h1 {margin-top:20px;}
+.mx-datepicker { width: 100%; }
+
 .downloads {
   display: flex;
   justify-content: flex-start;
