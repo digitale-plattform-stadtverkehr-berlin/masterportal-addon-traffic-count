@@ -1,6 +1,8 @@
 Entwicklung Masterportal Addon TrafficCount (gfiTheme)
 ======================================================
 
+DEPRECATED - Das Addon TrafficCount der "Digitalen Plattform Stadtverkehr - Berlin" ist in dem neuen Addon [SensorChart](https://github.com/digitale-plattform-stadtverkehr-berlin/masterportal-addon-sensor-chart) aufgegangen. 
+
 [Masterportal](https://bitbucket.org/geowerkstatt-hamburg/masterportal/src/dev/) TrafficCount Addon zur Verwendung in der "Digitale Plattform Stadtverkehr - Berlin"-Plattform.
 Basiert auf dem [Traffic Count Addon der Geowerkstatt Hamburg](https://bitbucket.org/geowerkstatt-hamburg/addons/src/dev/gfiThemes/trafficCount/).
 
